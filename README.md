@@ -16,6 +16,7 @@ En plus du notebook d’analyse, le projet inclut une application web **Streamli
 
 ## 📁 Structure du projet
 
+```
 project/
 ├── data/
 │ ├── SSH.txt # Logs SSH bruts (2000 lignes)
@@ -32,7 +33,7 @@ project/
 │ └── requirements.txt # Dépendances de l'application
 ├── logtocsv.py # Script de parsing / ETL
 └── README.md # Documentation du projet
-
+```
 
 ## 🚀 Installation
 
