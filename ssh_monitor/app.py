@@ -10,25 +10,46 @@ st.set_page_config(
 
 # 2. CHARGEMENT ET PRÉPARATION (ETL)
 @st.cache_data
-def load_data():
-    # Chargement
-    df = pd.read_csv('datasetssh.csv')
+def load_data(file_path_or_buffer):
+    """
+    Charge les données depuis un chemin de fichier OU un fichier uploadé.
+    """
+    # Chargement dynamique
+    df = pd.read_csv(file_path_or_buffer)
     
-    # CONVERSION CRUCIALE : Transformer le texte en dates
-    # 'coerce' permet de gérer les erreurs si une date est mal formée
-    df['Timestamp'] = pd.to_datetime(df['Timestamp'], errors='coerce')
+    # CONVERSION CRUCIALE
+    # On vérifie si la colonne Timestamp existe avant de convertir
+    if 'Timestamp' in df.columns:
+        df['Timestamp'] = pd.to_datetime(df['Timestamp'], errors='coerce')
+    else:
+        st.error("Erreur: Le fichier CSV doit contenir une colonne 'Timestamp'.")
+        return pd.DataFrame() # Retourne un DF vide en cas d'erreur
     
     return df
 
 # 3. INTERFACE PRINCIPALE
 def main():
-    st.title("🔒 MonitorSSH - Dashboard de Sécurité")
+    st.title("🔒 MonitorSSH - Dashboard de Sécurité : Clinique Tamalou")
     
-    # Chargement des données
-    try:
-        df_brut = load_data()
-    except FileNotFoundError:
-        st.error("Fichier datasetssh.csv introuvable.")
+    # --- UPLOAD DE FICHIER (BONUS) ---
+    st.sidebar.header("📁 Données")
+    uploaded_file = st.sidebar.file_uploader("Charger un nouveau fichier CSV", type=['csv'])
+
+    # Logique de chargement : Fichier Uploadé OU Fichier par défaut
+    if uploaded_file is not None:
+        st.sidebar.success("Fichier personnalisé chargé !")
+        df_brut = load_data(uploaded_file)
+    else:
+        # Chargement par défaut si rien n'est uploadé
+        try:
+            df_brut = load_data('datasetssh.csv')
+            st.sidebar.info("Utilisation du fichier de démo par défaut.")
+        except FileNotFoundError:
+            st.error("Fichier de démo 'datasetssh.csv' introuvable.")
+            return
+
+    # Si le chargement a échoué (ex: mauvais format CSV)
+    if df_brut.empty:
         return
 
     # --- SIDEBAR (Barre latérale) ---
