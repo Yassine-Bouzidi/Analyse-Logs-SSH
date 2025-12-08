@@ -29,7 +29,7 @@ def load_data(file_path_or_buffer):
 
 # 3. INTERFACE PRINCIPALE
 def main():
-    st.title("🔒 MonitorSSH - Dashboard de Sécurité : Clinique Tamalou")
+    st.title("🔒 Dashboard de Sécurité : Clinique Tamalou")
     
     # --- UPLOAD DE FICHIER (BONUS) ---
     st.sidebar.header("📁 Données")
