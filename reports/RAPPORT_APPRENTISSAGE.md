@@ -1,10 +1,5 @@
 # Rapport d'Apprentissage Python - Brief Pipeline d'Analyse de Logs SSH
 
-**Analyste** : Yassine Bouzidi  
-**Formation** : Simplon - Administrateur Solutions Cybersécurité  
-**Date** : 21/22 Novembre 2025  
-**Durée du brief** : 3 phases (ETL, Jupyter, Visualisation)
-
 ---
 
 ## 📚 Contexte du Projet
@@ -321,6 +316,124 @@ Pour chaque erreur rencontrée :
 
 ---
 
+## CODE DÉTAILLÉ AVEC EXPLICATIONS
+
+### Initialisation et Chargement
+```python
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import warnings
+warnings.filterwarnings('ignore')
+
+# Imports : Tu charges pandas (pour manipuler les tableaux de données), matplotlib et seaborn (pour créer les graphiques).
+# Warnings : warnings.filterwarnings('ignore') est une astuce pour garder ton notebook propre. Cela empêche Python d'afficher des avertissements rouges (souvent liés à des mises à jour futures de bibliothèques) qui ne bloquent pas le code mais polluent l'affichage.
+```
+
+```python
+pd.set_option('display.max_rows', 100)
+pd.set_option('display.max_columns', None)
+df = pd.read_csv('data/datasetssh.csv')
+sns.set_style('whitegrid')
+plt.rcParams['figure.figsize'] = (12, 6)
+print(f"📊 Dataset : {df.shape[0]} lignes × {df.shape[1]} colonnes\n")
+
+# Settings : Tu configures pandas pour afficher jusqu'à 100 lignes et toutes les colonnes (utile si ton écran est large). Tu définis aussi la taille par défaut des graphiques (12x6).
+# Chargement : read_csv charge ton fichier de logs dans la variable df (DataFrame). C'est maintenant ton tableau Excel virtuel.
+# sns.set_style('whitegrid') : Ajoute une grille blanche en fond de graphique (plus lisible et pro).
+# figure.figsize : Définit une taille d'image par défaut (12x6) assez large pour être lisible.
+# Vérification : df.shape te donne immédiatement la taille (nombre de lignes = nombre de logs, colonnes = infos extraites). C'est le premier réflexe d'un Data Analyst pour vérifier que le chargement a fonctionné.
+```
+
+### Inspection des Anomalies (Unknown)
+```python
+unknown_logs = df[df['EventId'] == 'UNKNOWN']
+
+# Filtrage : Tu crées un sous-tableau unknown_logs qui ne contient que les lignes où l'ID de l'événement n'a pas été reconnu par ton script précédent.
+# Investigation : Si tu en as (len > 0), tu affiches les messages bruts (Raw_Message) et les IPs sources.
+# Pourquoi c'est important ? En cybersécurité, un log "inconnu" peut être soit une erreur de parsing (ton script a mal lu la ligne), soit une nouvelle méthode d'attaque que tu ne connais pas encore.
+```
+
+### Traitement Temporel (Time Series)
+
+```python
+df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+df['Hour'] = df['Timestamp'].dt.hour
+df['Minute'] = df['Timestamp'].dt.minute
+df['Date'] = df['Timestamp'].dt.date
+
+# Conversion : Par défaut, les dates dans un CSV sont lues comme du texte. pd.to_datetime les convertit en objets datetime intelligents.
+# Extraction : Tu crées de nouvelles colonnes (Hour, Minute) pour faciliter l'analyse par heure plus tard. Cela te permettra de répondre à la question : "À quelle heure les pirates attaquent-ils le plus ?".
+```
+
+###  Analyse des Attaquants (Top IPs)
+
+```python
+top_ips = df['SourceIP'].value_counts().head(5)
+
+# Comptage : value_counts() compte combien de fois chaque IP apparaît et les trie par ordre décroissant.
+# Calcul de fréquence : (count / len(df)) * 100 calcule quel pourcentage du trafic total représente chaque attaquant. C'est vital pour prioriser : si une seule IP fait 43% des attaques, c'est ta cible prioritaire à bloquer.
+```
+
+### Analyse des Cibles (Utilisateurs & Root)
+
+```python
+root_attacks = df[df['User'] == 'root'].shape[0]
+total_with_user = df['User'].notna().sum()
+
+# Focus Root : Tu filtres le tableau pour ne garder que les lignes où l'utilisateur est "root". .shape[0] compte le nombre de lignes résultantes.
+# Remplissage : df['User'].notna().sum() compte combien de logs ont un utilisateur identifié (contrairement à ceux où c'est juste une connexion technique sans user).
+```
+
+### Analyse des Types d'Attaques (EventId)
+
+```python
+event_counts = df['EventId'].value_counts()
+
+# Distribution : Permet de voir comment on t'attaque. Est-ce surtout du "Failed password" (force brute) ou du "Invalid user" (dictionnaire d'utilisateurs) ?
+# Visualisation texte : La ligne bar = "█" * int(percentage) est une astuce sympa pour faire un mini-graphique directement dans la console textuelle.
+```
+
+### Visualisation Graphique (Data Viz)
+
+**Graphique 1 : Bar Chart (Top IPs)**
+```python
+bars = plt.bar(range(len(top_10_ips)), top_10_ips.values, color='crimson'...)
+
+# Choix du graph : Un diagramme en barres est idéal pour comparer des quantités (nombre d'attaques) entre différentes catégories (IPs).
+# Couleur : 'crimson' (rouge sang) est choisi pour rappeler le danger/l'alerte.
+# Annotations : La boucle for avec plt.text ajoute le chiffre exact au-dessus de chaque barre, ce qui rend le graph lisible même sans regarder l'axe Y.
+```
+
+**Graphique 2 : Pie Chart (Camembert des événements)**
+```python
+if others > 0:
+    pie_data = pd.concat([top_5_events, pd.Series({'Autres': others})])
+else:
+    pie_data = top_5_events
+
+wedges, texts, autotexts = plt.pie(pie_data.values, labels=pie_data.index, ...)
+
+# La Préparation (pd.concat): C'est l'étape de calcul. Python trie tes données brutes (qui sont trop nombreuses et illisibles) pour créer un petit groupe propre : les 5 événements principaux + une catégorie "Autres".
+
+# Résultat : Une liste de données prête à l'emploi.
+
+# La Présentation (plt.pie et explode): C'est l'étape de dessin. Python prend la liste propre préparée juste avant et génère l'image du camembert. C'est ici qu'on ajoute l'option explode pour écarter les parts et rendre le graphique joli.
+
+# Résultat : L'image finale du graphique.
+```
+
+**Graphique 3 : Line Chart (Chronologie)**
+```python
+attacks_per_hour = df.groupby('Hour').size()
+plt.plot(..., color='darkred')
+plt.fill_between(...)
+
+# Groupby : Tu regroupes les données par heure (0h, 1h... 23h) et tu comptes la taille (size) de chaque groupe.
+
+# Rendu : fill_between colorie la zone sous la courbe, ce qui donne un effet de volume à l'attaque. Cela permet de voir s'il y a eu un pic soudain (attaque scriptée massive) ou si c'est constant.
+```
+
 ## 🎓 Conclusion
 
 Ce brief m'a permis de développer des compétences solides en Python pour l'analyse de données de sécurité. J'ai appris à :
@@ -329,13 +442,4 @@ Ce brief m'a permis de développer des compétences solides en Python pour l'ana
 2. **Structurer** des données non structurées avec des regex
 3. **Analyser** des volumes importants de données avec Pandas
 4. **Communiquer** des résultats techniques via des visualisations
-5. **Documenter** mon travail de manière professionnelle
-
-**Python est devenu un outil essentiel dans ma boîte à outils de cybersécurité.**
-
 ---
-
-**Yassine Bouzidi**  
-Administrateur Solutions Cybersécurité en Formation  chez Simplon
-Novembre 2025
-

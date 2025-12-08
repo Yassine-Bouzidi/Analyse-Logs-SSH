@@ -3,16 +3,6 @@
 
 ---
 
-**Projet :** MonitorSSH - Web App de Monitoring SSH  
-**Auteur :** Yassine Bouzidi  
-**Date :** 8 Décembre 2025  
-**Formation :** Simplon - Cybersécurité  
-**Technologie :** Python, Streamlit, Pandas, GitHub, Streamlit Cloud  
-**Lien Public :** https://dashboard-ssh-ysn.streamlit.app  
-**Dépôt GitHub :** https://github.com/Yassine-Bouzidi/Analyse-Logs-SSH
-
----
-
 ## TABLE DES MATIÈRES
 1. Contexte et Objectifs
 2. Architecture Technique
@@ -51,23 +41,24 @@ Une application professionnelle, stable, hébergée gratuitement sur Streamlit C
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                 FRONTEND (Navigateur)                    │
-│        - Streamlit UI (Sidebar, Graphiques, Tableaux)   │
+│                 FRONTEND (Navigateur)                   │
+│   - Streamlit UI (Sidebar, Graphiques, Tableaux)        │
 └────────────────────┬────────────────────────────────────┘
                      │ HTTP/HTTPS
 ┌────────────────────▼────────────────────────────────────┐
-│           BACKEND (Streamlit Server)                     │
-│  - Python 3.10+                                          │
-│  - Pandas (Traitement de données)                        │
+│           BACKEND (Streamlit Server)                    │
+│  - Python 3.10+                                         │
+│  - Pandas (Traitement de données)                       │
 │  - Cache (@st.cache_data)                               │
 └────────────────────┬────────────────────────────────────┘
                      │ Lecture de fichiers
 ┌────────────────────▼────────────────────────────────────┐
-│              STOCKAGE (GitHub + Cloud)                   │
-│  - app.py, requirements.txt (GitHub)                     │
-│  - datasetssh.csv (Dépôt GitHub)                         │
-│  - Déploiement via Streamlit Cloud                       │
+│              STOCKAGE (GitHub + Cloud)                  │
+│  - app.py, requirements.txt (GitHub)                    │
+│  - datasetssh.csv (Dépôt GitHub)                        │
+│  - Déploiement via Streamlit Cloud                      │
 └─────────────────────────────────────────────────────────┘
+
 ```
 
 ### 2.2 Fonctionnement du Cache (@st.cache_data)
@@ -89,9 +80,7 @@ Avec cache (@st.cache_data) :
 
 ## 3. ÉTAPES DE DÉVELOPPEMENT
 
-### JOUR 1 : Architecture et Premiers Affichages
-
-#### Étape 1 : Préparation du Projet
+### Étape 1 : Préparation du Projet
 ```
 ssh_monitor/
 ├── app.py                 # Fichier principal Streamlit
@@ -119,10 +108,10 @@ __pycache__/
 ```
 Indique à Git quels fichiers IGNORER lors du commit (évite de versionner l'environnement virtuel lourd).
 
-#### Étape 2 : Code Initial (app.py)
+### Étape 2 : Code Initial (app.py)
 **Voir section 4 pour explications ligne par ligne.**
 
-#### Étape 3 : Lancement Local
+### Étape 3 : Lancement Local
 ```bash
 streamlit run app.py
 ```
@@ -130,26 +119,24 @@ L'app s'ouvre automatiquement sur `localhost:8501`.
 
 ---
 
-### JOUR 2 : Interactivité et Production
-
-#### Phase 1 : Ajout des Filtres (Sidebar)
+### Phase 1 : Ajout des Filtres (Sidebar)
 - Filtre par plage de dates
 - Filtre par type d'événement (multiselect)
 - Filtre par IP spécifique
 
-#### Phase 2 : Visualisation (Graphiques)
+### Phase 2 : Visualisation (Graphiques)
 - Bar Chart : Top 10 IPs attaquantes
 - Line Chart : Volume d'attaques par heure
 - Bar Chart : Usernames les plus tentés
 
-#### Phase 3 : Déploiement (GitHub + Streamlit Cloud)
+### Phase 3 : Déploiement (GitHub + Streamlit Cloud)
 1. Initialiser Git : `git init`
 2. Commit initial : `git commit -m "Initial commit"`
 3. Push GitHub : `git push`
 4. Déployer sur Streamlit Cloud (lien du repo)
 5. App publique en ligne (URL `dashboard-ssh-ysn.streamlit.app`)
 
-#### Phase 4 : Bonus (Upload de fichier)
+### Phase 4 : Bonus (Upload de fichier)
 Ajout de la fonctionnalité `st.file_uploader` pour permettre aux utilisateurs de charger leurs propres fichiers CSV.
 
 ---
@@ -602,8 +589,6 @@ Ce projet démontre une **maîtrise complète du cycle de développement** :
 - ✅ Optimisation (Cache, Performance)
 - ✅ Documentation et communication
 
-Le livrable est **prêt pour un SOC (Security Operations Center) réel** et peut accélérer la détection de menaces.
-
 ---
 
 ## ANNEXES
@@ -616,14 +601,4 @@ Le livrable est **prêt pour un SOC (Security Operations Center) réel** et peut
 - **CI/CD** : Continuous Integration / Continuous Deployment (automatisation)
 - **SOC** : Security Operations Center (équipe de sécurité)
 
-### Ressources
-- [Streamlit Documentation](https://docs.streamlit.io/)
-- [Pandas User Guide](https://pandas.pydata.org/docs/)
-- [Git Tutorial](https://git-scm.com/doc)
-- [GitHub Pages](https://github.com/)
-
 ---
-
-**Fin du rapport**
-
-*Document créé le 8 Décembre 2025 - Yassine Bouzidi*

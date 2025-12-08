@@ -18,20 +18,20 @@ En plus du notebook d’analyse, le projet inclut une application web **Streamli
 
 project/
 ├── data/
-│   ├── SSH.txt                        # Logs SSH bruts (2000 lignes)
-│   └── datasetssh.csv                 # Dataset SSH normalisé (généré)
+│ ├── SSH.txt # Logs SSH bruts (2000 lignes)
+│ └── datasetssh.csv # Dataset SSH normalisé (généré)
 ├── notebooks/
-│   └── Investigation_Menaces.ipynb    # Notebook d'analyse Jupyter
+│ └── Investigation_Menaces.ipynb # Notebook d'analyse Jupyter
 ├── reports/
-│   ├── Investigation_Menaces.pdf
-│   ├── RAPPORT_APPRENTISSAGE.md
-│   └── rapport_monitorssh.md
+│ ├── Investigation_Menaces.pdf
+│ ├── RAPPORT_APPRENTISSAGE.md
+│ └── rapport_monitorssh.md
 ├── ssh_monitor/
-│   ├── app.py                         # Dashboard Streamlit (MonitorSSH)
-│   ├── datasetssh.csv                 # Dataset d'exemple pour la démo
-│   └── requirements.txt               # Dépendances de l'application
-├── logtocsv.py                        # Script de parsing / ETL
-└── README.md                          # Documentation du projet
+│ ├── app.py # Dashboard Streamlit (MonitorSSH)
+│ ├── datasetssh.csv # Dataset d'exemple pour la démo
+│ └── requirements.txt # Dépendances de l'application
+├── logtocsv.py # Script de parsing / ETL
+└── README.md # Documentation du projet
 
 
 ## 🚀 Installation
