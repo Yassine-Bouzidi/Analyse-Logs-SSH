@@ -176,8 +176,8 @@ def smart_parse_ssh_log(line, event_patterns, previous_timestamp=None):
 
 def main():
     """Fonction principale du script ETL avec gestion intelligente des années"""
-    input_file = 'SSH.txt'
-    output_file = 'datasetssh.csv'
+    input_file = 'data/SSH.txt'
+    output_file = 'data/datasetssh.csv'
     
     print(f"[*] Chargement des templates...")
     event_patterns = load_templates()

@@ -1,47 +1,88 @@
-# Pipeline d'Analyse de Logs SSH - Investigation SOC
+# Pipeline d’Analyse de Logs SSH – Investigation SOC & MonitorSSH
 
 ## 📋 Description
 
-Ce projet implémente un pipeline ETL (Extract, Transform, Load) complet pour l'analyse de logs SSH dans un contexte SOC (Security Operations Center). Il permet de détecter et visualiser les tentatives d'attaques par force brute sur un serveur critique.
+Ce projet met en place un pipeline ETL complet pour analyser des logs SSH dans un contexte SOC (Security Operations Center), depuis des fichiers bruts jusqu’à un dashboard interactif.  
+Il permet d’identifier les tentatives d’attaques (notamment par force brute), de visualiser les comportements suspects et de produire des rapports exploitables pour les équipes de sécurité.  
+
+En plus du notebook d’analyse, le projet inclut une application web **Streamlit** nommée **MonitorSSH**, qui transforme le dataset en un outil de monitoring accessible depuis un navigateur.
 
 ## 🎯 Objectifs
 
-- **Automatiser** l'extraction et la normalisation de logs SSH bruts
-- **Identifier** les adresses IP malveillantes et les patterns d'attaque
-- **Visualiser** les menaces de sécurité pour faciliter la prise de décision
-- **Produire** des rapports d'analyse exploitables pour les équipes SOC
+- Automatiser l’extraction, la normalisation et l’enrichissement de logs SSH bruts (pipeline ETL).  
+- Identifier les adresses IP malveillantes, les utilisateurs ciblés et les patterns d’attaque récurrents.  
+- Visualiser les menaces de sécurité via des graphiques clairs et des métriques SOC.  
+- Fournir un **dashboard web interactif** pour les analystes, sans besoin d’ouvrir un notebook.  
 
-## 📁 Structure du Projet
+## 📁 Structure du projet
+
 project/
-├── SSH.txt # Logs SSH bruts (2000 lignes)
-├── openssh-2k-log-templates-xxx.csv # Templates d'événements SSH
-├── logtocsv.py # Script de parsing ETL
-├── datasetssh.csv # Dataset normalisé (généré)
-├── Investigation_Menaces.ipynb # Notebook d'analyse Jupyter
-├── README.md # Ce fichier
-└── RAPPORT_APPRENTISSAGE.md # Rapport d'apprentissage Python
+├── data/
+│   ├── SSH.txt                        # Logs SSH bruts (2000 lignes)
+│   └── datasetssh.csv                 # Dataset SSH normalisé (généré)
+├── notebooks/
+│   └── Investigation_Menaces.ipynb    # Notebook d'analyse Jupyter
+├── reports/
+│   ├── Investigation_Menaces.pdf
+│   ├── RAPPORT_APPRENTISSAGE.md
+│   └── rapport_monitorssh.md
+├── ssh_monitor/
+│   ├── app.py                         # Dashboard Streamlit (MonitorSSH)
+│   ├── datasetssh.csv                 # Dataset d'exemple pour la démo
+│   └── requirements.txt               # Dépendances de l'application
+├── logtocsv.py                        # Script de parsing / ETL
+└── README.md                          # Documentation du projet
+
 
 ## 🚀 Installation
 
-### Installation des Dépendances
+### Prérequis
 
 - Python 3.8 ou supérieur
 - pip (gestionnaire de paquets Python)
 - Bibliothèque `pandas`, `Jupyter`, `matplotlib`, `seaborn` et `ipkernel`
+- Git (pour cloner le dépôt)
+
+### Clonage du dépôt
+
+git clone https://github.com/Yassine-Bouzidi/Analyse-Logs-SSH.git
+
+cd Analyse-Logs-SSH/project
+
+### Installation des Dépendances
+
+Création d’un environnement virtuel (recommandé) :
+python -m venv .venv
+
+Linux / macOS:
+source .venv/bin/activate
+
+Windows:
+..venv\Scripts\activate
+
+
+Installation des dépendances globales (ETL + analyse) :
 
 pip install pandas matplotlib seaborn jupyter ipykernel
 
 
+Pour l’application Streamlit, les dépendances spécifiques sont listées dans `project/ssh_monitor/requirements.txt` :
+
+cd ssh_monitor
+pip install -r requirements.txt
+
+
 ## 💻 Utilisation
 
-### Étape 1 : Générer le Dataset CSV
+### Étape 1 : Générer le Dataset CSV (ETL)
 
 Exécutez le script de parsing pour convertir les logs bruts en dataset structuré :
 
+cd project
 python logtocsv.py
 
 
-**Sortie attendue :**
+**Sortie principale :**
 
 - Le fichier de sortie normalisé contient les colonnes suivantes :
 
@@ -56,14 +97,41 @@ python logtocsv.py
 
 - Affichage des statistiques : Top IPs, Top événements, taux de parsing
 
-### Étape 2 : Analyse dans Jupyter Notebook
+
+## 🔧 Détails techniques ETL
+
+### Gestion des logs inconnus
+
+Une attention particulière a été portée à la réduction du bruit : le parser couvre les principales erreurs de protocole SSH, exceptions applicatives et variations syntaxiques, afin de limiter au maximum les événements “UNKNOWN”.  
+
+### Moteur regex et EventIds
+
+Le moteur repose sur un dictionnaire d’expressions régulières permettant de mapper chaque ligne de log à un `EventId` normalisé.  
+Les événements critiques incluent notamment les échecs d’authentification, les utilisateurs invalides et les messages de type tentative d’intrusion.
+
+
+### 📊 Étape 2 : Analyse dans Jupyter Notebook
 
 Lancez Jupyter Notebook pour l'analyse visuelle :
 
 jupyter notebook Investigation_Menaces.ipynb
 
+Le notebook `notebooks/Investigation_Menaces.ipynb` réalise l’analyse exploratoire et visuelle :
 
-Ou ouvrez le fichier `.ipynb` directement dans VS Code avec l'extension Jupyter.
+1. Chargement du dataset SSH via `pandas`.  
+2. Nettoyage et mise en forme des timestamps.  
+3. Analyses statistiques :  
+   - Top IPs malveillantes.  
+   - Utilisateurs les plus ciblés (dont `root`).  
+   - Répartition des types d’événements.  
+4. Visualisations :  
+   - Bar chart des IPs les plus agressives.  
+   - Diagrammes de répartition des événements.  
+   - Timeline du volume d’attaques dans le temps.  
+
+L’objectif est de fournir à l’analyste SOC une vision claire des tendances d’attaque et des priorités de remédiation.
+
+
 
 ## 📊 Fonctionnalités du Script `logtocsv.py`
 
@@ -130,45 +198,74 @@ E24 (Disconnect) : 413 occurrences (20.7%)
 E9 (Failed password) : 385 occurrences (19.3%)
 
 
-## 🛡️ Recommandations de Sécurité
 
-Sur la base de cette analyse, les recommandations SOC incluent :
+## 🌐 Étape 3 – MonitorSSH : Dashboard Streamlit
 
-1. **Blocage immédiat** des IPs du Top 5 via firewall
+En complément du notebook, le projet propose une application web **Streamlit** appelée `MonitorSSH`, permettant d’explorer les logs de manière interactive via un navigateur web.
+
+### Lancement en local
+
+Depuis la racine du projet :
+
+cd project/ssh_monitor
+pip install -r requirements.txt
+streamlit run app.py
+
+
+### Fonctionnalités principales
+
+- Indicateurs clés (métriques) :
+  - Nombre total d’événements.
+  - Nombre d’IPs uniques.
+  - Volume de tentatives d’authentification échouées.
+- Filtres interactifs (dans la barre latérale) :
+  - Filtre par `EventId` (type d’événement).
+  - Sélection d’IPs spécifiques.
+  - Filtrage temporel.
+- Graphiques interactifs :
+  - Top IPs agressives.
+  - Volume d’attaques par heure/jour.
+  - Utilisateurs les plus ciblés.
+
+L’application peut être déployée sur **Streamlit Community Cloud** pour obtenir une URL publique partageable avec un responsable ou un recruteur, ce qui est une pratique courante pour les dashboards Streamlit.
+
+
+## 🛡️ Recommandations de sécurité
+
+À partir des résultats du pipeline et du dashboard, plusieurs actions de sécurité peuvent être proposées :
+
+1. **Blocage immédiat** des IPs les plus agressives au niveau du firewall. 
 2. **Désactivation de l'authentification root SSH** (`PermitRootLogin no`)
-3. **Implémentation de Fail2Ban** pour blocage automatique
-4. **Migration vers l'authentification par clés SSH**
+3. **Implémentation de Fail2Ban** ou équivalent pour bannir automatiquement les IPs en cas de tentatives répétées.
+4. **Migration progressive vers l’authentification par clés SSH**.
 5. **Changement du port SSH** (22 → port personnalisé)
-6. **Déploiement d'un IDS/IPS** (Snort, Suricata)
+6. **Intégration de la surveillance SSH dans un IDS/IPS** (Snort, Suricata, etc.).
 
-## 📚 Technologies Utilisées
+Ces recommandations sont classiques dans le hardening SSH et la réponse à des attaques par force brute.
 
-- **Python 3.x** : Langage de programmation principal
-- **Pandas** : Manipulation et analyse de données
-- **Matplotlib** : Création de graphiques
-- **Seaborn** : Visualisations statistiques avancées
-- **Jupyter Notebook** : Environnement d'analyse interactif
-- **Regex (re)** : Parsing de logs avec expressions régulières
+
+## 📚 Technologies utilisées
+
+- **Python 3.x** – Langage principal.  
+- **Pandas** – Manipulation et analyse de données.  
+- - **Matplotlib** : Création de graphiques
+- **Seaborn** : Visualisations statistiques avancées  
+- **Jupyter Notebook** – Analyse exploratoire et documentation technique.  
+- **Regex (`re`)** – Parsing avancé des logs.  
+- **Streamlit** – Développement du dashboard web interactif.  
+- **Git / GitHub** – Versionnement et partage du projet.  
+
+L’ensemble de cette stack est typique des projets cybersécurité modernes.
+
 
 ## 👤 Auteur
 
 **Yassine Bouzidi**  
-Administrateur Solutions cybersécurité  
-Formation : Simplon - Pipeline d'Analyse de Logs SSH  
-Date : 21/22 Novembre 2025
+Administrateur solutions cybersécurité  
+Formation : Simplon – Pipeline d’Analyse de Logs SSH (2025)
 
 ## 📝 Licence
 
-Ce projet est développé dans un cadre pédagogique pour la formation en cybersécurité.
-
-## 🤝 Contribution
-
-Pour toute question ou amélioration, n'hésitez pas à ouvrir une issue ou soumettre une pull request.
-
-## 📞 Support
-
-Pour toute assistance technique :
-- Consultez la documentation inline dans `logtocsv.py`
-- Référez-vous au notebook Jupyter pour des exemples d'utilisation
-- Consultez le rapport d'apprentissage pour comprendre la démarche
+Ce projet est distribué sous licence **MIT**.  
+Consultez le fichier `LICENSE` à la racine du dépôt pour plus de détails.
 
