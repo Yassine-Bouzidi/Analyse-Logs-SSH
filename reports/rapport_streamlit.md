@@ -1,43 +1,44 @@
-# RAPPORT TECHNIQUE COMPLET : MONITORSSH
-## Dashboard de Sécurité - Analyse de Logs SSH
-
----
+# DASHBOARD MONITORSSH
 
 ## TABLE DES MATIÈRES
-1. Contexte et Objectifs
-2. Architecture Technique
-3. Étapes de Développement (Jour 1 & Jour 2)
-4. Code Détaillé avec Explications
-5. Déploiement et Production
-6. Résultats et Métriques
-7. Améliorations Futures
+1. [Contexte et Objectifs](#1-contexte-et-objectifs)
+2. [Architecture Technique](#2-architecture-technique)
+3. [Fonctionnalités Avancées : Géolocalisation](#3-fonctionnalités-avancées--géolocalisation)
+4. [Code Détaillé et Optimisations](#4-code-détaillé-et-optimisations)
+5. [Déploiement et Production](#5-déploiement-et-production)
+6. [Résultats et Métriques](#6-résultats-et-métriques)
+7. [Améliorations Futures](#7-améliorations-futures)
 
 ---
 
 ## 1. CONTEXTE ET OBJECTIFS
 
-### Problématique
-Les administrateurs système et les responsables sécurité (CISO) reçoivent quotidiennement des centaines de milliers de logs SSH bruts. Ces données sont :
-- **Non structurées** : texte brut, difficile à parcourir
-- **Énormes** : 655 147 entrées dans notre cas
-- **Inutilisables** : sans outils de visualisation adéquats
+### Problématique:
+Les administrateurs système et les responsables sécurité (CISO) font face à un volume massif de logs SSH bruts. Ces données, bien que riches en information, sont :
+- **Volumineuses** : +650 000 entrées à traiter dans notre cas d'étude.
+- **Abstraites** : Une liste d'adresses IP ne permet pas de visualiser l'origine géographique des attaques.
+- **Difficiles à corréler** : Impossible de lier rapidement une vague d'attaques à un pays spécifique sans outil dédié.
 
-### Solution Apportée
-Développer une **Web App interactive** (SaaS) permettant de :
-1. Charger des fichiers de logs SSH en format CSV
-2. Filtrer les données par plusieurs critères (dates, types d'événements, adresses IP)
-3. Visualiser les données sous forme de graphiques et tableaux
-4. Identifier rapidement les menaces et les patterns d'attaque
-5. Déployer publiquement pour accès multi-utilisateurs
+### Solution Apportée:
+Une application **Web App interactive (SaaS)** complète permettant de :
+1. **Ingérer** des logs SSH (CSV) de manière performante.
+2. **Filtrer** dynamiquement les menaces (Temps, Type d'attaque, IP).
+3. **Géolocaliser** les attaquants sur une carte mondiale interactive.
+4. **Visualiser** les tendances (Top Pays, Chronologie des attaques).
+5. **Déployer** la solution publiquement pour un accès universel.
 
-### Résultat
+### Résultat:
 Une application professionnelle, stable, hébergée gratuitement sur Streamlit Cloud et accessible depuis n'importe quel navigateur web.
 
+
 ---
+
 
 ## 2. ARCHITECTURE TECHNIQUE
 
 ### 2.1 Stack Technologique
+
+Le projet repose sur une architecture moderne orientée Data Science :
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -50,6 +51,7 @@ Une application professionnelle, stable, hébergée gratuitement sur Streamlit C
 │  - Python 3.10+                                         │
 │  - Pandas (Traitement de données)                       │
 │  - Cache (@st.cache_data)                               │
+│  - Altair/Map (Visualisation)                           │
 └────────────────────┬────────────────────────────────────┘
                      │ Lecture de fichiers
 ┌────────────────────▼────────────────────────────────────┐
@@ -58,107 +60,62 @@ Une application professionnelle, stable, hébergée gratuitement sur Streamlit C
 │  - datasetssh.csv (Dépôt GitHub)                        │
 │  - Déploiement via Streamlit Cloud                      │
 └─────────────────────────────────────────────────────────┘
-
 ```
 
-### 2.2 Fonctionnement du Cache (@st.cache_data)
+### 2.2 Gestion Avancée du Cache (`@st.cache_data`)
 
 **Le cache est crucial pour la performance.**
 
 Sans cache :
+
 - À chaque clic sur un filtre → Rechargement du CSV (655k lignes)
 - **Temps d'attente :** 2-3 secondes par interaction
 - **Expérience utilisateur :** Frustrante
 
 Avec cache (@st.cache_data) :
-- Premier chargement : Sauvegarde le DataFrame en mémoire
-- Interactions suivantes : Lecture depuis la RAM (instantané)
-- **Temps d'attente :** <100ms
-- **Expérience utilisateur :** Fluide et responsive
+
+L'optimisation est critique pour deux aspects :
+1.  **Chargement des données** : Évite de recharger le CSV (75 Mo) à chaque interaction utilisateur.
+2.  **Géolocalisation API** : Stocke les coordonnées GPS en mémoire pour ne pas interroger l'API externe inutilement à chaque rafraîchissement.
+3.  **Gain de performance** : Passage de ~20 secondes (appel API initial) à <100ms (lecture cache).
+4.  **Expérience utilisateur :** Fluide et responsive
 
 ---
 
-## 3. ÉTAPES DE DÉVELOPPEMENT
+## 3. FONCTIONNALITÉS AVANCÉES : GÉOLOCALISATION
 
-### Étape 1 : Préparation du Projet
-```
-ssh_monitor/
-├── app.py                 # Fichier principal Streamlit
-├── requirements.txt       # Dépendances Python
-├── .gitignore            # Fichiers à ignorer lors du push GitHub
-└── datasetssh.csv        # Données de démo
-```
+### 3.1 Mécanisme de Géolocalisation
+L'application enrichit les logs bruts en interrogeant une API externe pour convertir les adresses IP en coordonnées géographiques.
 
-**Fichiers créés :**
+*   **API utilisée** : `ip-api.com` (Endpoint Batch).
+*   **Contrainte technique** : Limite stricte de 45 requêtes/minute et 100 IPs par requête.
+*   **Stratégie implémentée** :
+    1.  Extraction des IPs uniques uniquement.
+    2.  Découpage des IPs en lots (batchs) de 100.
+    3.  **Temporisation automatique (`time.sleep(1.5)`)** entre les lots pour respecter le rate-limiting et éviter le bannissement de l'IP du serveur.
+    4.  Traitement des erreurs robuste (`try/except`) pour garantir la stabilité de l'application.
 
-**1. requirements.txt**
-```
-streamlit
-pandas
-matplotlib
-```
-Contient les librairies nécessaires. À installer avec : `pip install -r requirements.txt`
-
-**2. .gitignore**
-```
-.venv/
-__pycache__/
-*.pyc
-.DS_Store
-```
-Indique à Git quels fichiers IGNORER lors du commit (évite de versionner l'environnement virtuel lourd).
-
-### Étape 2 : Code Initial (app.py)
-**Voir section 4 pour explications ligne par ligne.**
-
-### Étape 3 : Lancement Local
-```bash
-streamlit run app.py
-```
-L'app s'ouvre automatiquement sur `localhost:8501`.
+### 3.2 Visualisation
+*   **Carte Interactive (`st.map`)** : Projection des points d'attaques (Lat/Lon) sur une carte mondiale.
+*   **Graphique Top Pays (Altair)** : Diagramme en barres trié automatiquement par volume décroissant pour identifier instantanément les principaux pays sources, remplaçant le tri alphabétique par défaut.
 
 ---
 
-### Phase 1 : Ajout des Filtres (Sidebar)
-- Filtre par plage de dates
-- Filtre par type d'événement (multiselect)
-- Filtre par IP spécifique
+## 4. CODE DÉTAILLÉ ET OPTIMISATIONS
 
-### Phase 2 : Visualisation (Graphiques)
-- Bar Chart : Top 10 IPs attaquantes
-- Line Chart : Volume d'attaques par heure
-- Bar Chart : Usernames les plus tentés
-
-### Phase 3 : Déploiement (GitHub + Streamlit Cloud)
-1. Initialiser Git : `git init`
-2. Commit initial : `git commit -m "Initial commit"`
-3. Push GitHub : `git push`
-4. Déployer sur Streamlit Cloud (lien du repo)
-5. App publique en ligne (URL `dashboard-ssh-ysn.streamlit.app`)
-
-### Phase 4 : Bonus (Upload de fichier)
-Ajout de la fonctionnalité `st.file_uploader` pour permettre aux utilisateurs de charger leurs propres fichiers CSV.
-
----
-
-## 4. CODE DÉTAILLÉ AVEC EXPLICATIONS
-
-### 4.1 Configuration et Imports
+### 4.1 Configuration et Imports:
 
 ```python
-# ======== LIGNE 1 : IMPORT STREAMLIT ========
-import streamlit as st
-# Streamlit est le framework qui crée l'interface web.
-# Il gère automatiquement la conversion de code Python en UI interactive.
-# Alternative : Flask/Django (plus lourd)
+import streamlit as st # Streamlit est le framework qui crée l'interface web. Il gère automatiquement la conversion de code Python en UI interactive.
+import pandas as pd    # Pandas est la librairie standard pour manipuler les données (DataFrames). Un DataFrame est comme une table Excel : lignes + colonnes
+import requests        # Pour interroger l'API de géolocalisation
+import os              # Permet au script Python de "discuter" avec l'ordinateur sur lequel il tourne pour faire des tâches
+import time            # Pour gérer les pauses (rate limiting)
+import altair as alt   # Pour les graphiques avancés (Top Pays)
 
-# ======== LIGNE 2 : IMPORT PANDAS ========
-import pandas as pd
-# Pandas est la librairie standard pour manipuler les données (DataFrames).
-# Un DataFrame est comme une table Excel : lignes + colonnes
+script_dir = os.path.dirname(__file__) # Récupère le chemin du dossier actuel
 ```
-
-### 4.2 Configuration de la Page Streamlit
+### 4.2 Configuration de la Page Streamlit:
 
 ```python
 # ======== CONFIGURATION DE PAGE ========
@@ -177,7 +134,7 @@ st.set_page_config(
 )
 ```
 
-### 4.3 Fonction de Chargement (ETL)
+### 4.3 Fonction de Chargement (ETL):
 
 ```python
 # ======== DÉCORATEUR CACHE - TRÈS IMPORTANT ========
@@ -223,7 +180,67 @@ def load_data(file_path_or_buffer):
     # Retourne le DataFrame nettoyé et prêt à l'emploi
 ```
 
-### 4.4 Fonction Principale (Interface)
+### 4.4 Module de Géolocalisation:
+
+Ce code gère la communication avec l'API externe tout en respectant les limites de débit.
+
+```python
+@st.cache_data # Stocke les résultats en mémoire pour éviter de payer le temps d'attente 2 fois
+
+def get_locations(ip_list):
+    """
+    Récupère lat/lon/pays pour une liste d'IPs uniques.
+    Gère le rate-limiting et le batch processing.
+    """
+    locations = []
+    unique_ips = list(set(ip_list)) # On enlève les doublons
+
+    # Traitement par paquets de 100 pour optimiser les appels réseau
+    for i in range(0, len(unique_ips), 100):
+        batch = unique_ips[i:i+100]
+        try:
+            # Appel API Batch (1 requête = 100 IPs)
+            response = requests.post(
+                "http://ip-api.com/batch", 
+                json=[{"query": ip, "fields": "lat,lon,country,query"} for ip in batch]
+             ).json()
+        
+            # Parsing de la réponse et Stockage des résultats
+            for item in response:
+                if 'lat' in item and 'lon' in item:
+                  locations.append({
+                        'ip': item['query'], 
+                       'lat': item['lat'], 
+                       'lon': item['lon'],
+                       'country': item.get('country', 'Inconnu')
+                    })
+        
+            # PAUSE DE SÉCURITÉ (Rate Limiting)
+            # Indispensable pour éviter le bannissement API
+            time.sleep(1.5) 
+        
+        except Exception as e:
+            st.error(f"Erreur API : {e}")
+            break
+        
+    return pd.DataFrame(locations)
+```
+
+### 4.5 Tri et Affichage Avancé (Altair):
+
+Utilisation de la librairie Altair pour forcer l'ordre décroissant des barres (le comportement par défaut de Streamlit étant parfois alphabétique).
+
+```python
+# Utilisation de la librairie Altair pour un contrôle total
+chart = alt.Chart(top_countries).mark_bar().encode(
+x=alt.X('Pays', sort='-y', title='Pays'), # Tri forcé sur l'axe Y (Volume)
+y=alt.Y('Nombre', title="Nombre d'attaques"),
+tooltip=['Pays', 'Nombre']
+)
+st.altair_chart(chart, use_container_width=True)
+```
+
+### 4.6 Fonction Principale (Interface):
 
 ```python
 # ======== DÉFINITION DE LA FONCTION PRINCIPALE ========
@@ -475,18 +492,85 @@ def main():
         # Exemple : root (400k tentatives), admin (5k), support (200), ...
         st.bar_chart(top_users)
 
+# ======== GÉOLOCALISATION ========
+    st.markdown("---")
+    st.header("🌍 Carte des Attaques")
+
+    if 'SourceIP' in df_filtered.columns:
+        ips_to_locate = df_filtered['SourceIP'].dropna().unique().tolist()
+        
+        if len(ips_to_locate) > 0:
+            st.info(f"Géolocalisation de {len(ips_to_locate)} adresses IP uniques en cours...")
+            
+            with st.spinner("Interrogation de l'API de localisation..."):
+                df_locations = get_locations(ips_to_locate)
+
+            if not df_locations.empty:
+                # 1. LA CARTE
+                st.map(df_locations, size=20, color='#FF0000')
+                st.caption(f"{len(df_locations)} localisations trouvées.")
+                
+                # 2. LE GRAPHIQUE TOP PAYS (ALTAIR)
+                st.subheader("📊 Top 10 des Pays d'origine")
+                
+                # Préparation des données
+                top_countries = df_locations['country'].value_counts().head(10).reset_index()
+                top_countries.columns = ['Pays', 'Nombre']
+                
+                # Création du graphique Altair (Tri décroissant forcé)
+                chart = alt.Chart(top_countries).mark_bar().encode(
+                    x=alt.X('Pays', sort='-y', title='Pays'), # Trie l'axe X selon les valeurs de Y décroissantes
+                    y=alt.Y('Nombre', title="Nombre d'attaques"),
+                    tooltip=['Pays', 'Nombre']
+                ).properties(height=400)
+                
+                st.altair_chart(chart, use_container_width=True)
+
+            else:
+                st.warning("Aucune localisation trouvée.")
+
 # ======== POINT D'ENTRÉE ========
 if __name__ == "__main__":
     # Cette condition = "si ce fichier est lancé directement (pas importé ailleurs)"
     main()
     # Appelle la fonction principale
 ```
-
 ---
 
 ## 5. DÉPLOIEMENT ET PRODUCTION
 
-### 5.1 Préparation GitHub
+### Environnement:
+
+*   **Plateforme** : Streamlit Community Cloud.
+*   **Source** : Dépôt GitHub connecté en CI/CD (Continuous Deployment).
+
+```
+ssh_monitor/
+├── app.py                 # Fichier principal Streamlit
+├── requirements.txt       # Dépendances Python
+├── .gitignore            # Fichiers à ignorer lors du push GitHub
+└── datasetssh.csv        # Données de démo
+```
+
+*   **Fichiers de configuration** :
+
+**`requirements.txt`** (Dépendances) :
+```
+streamlit
+pandas
+requests
+altair
+```
+Contient les librairies nécessaires. À installer avec : `pip install -r requirements.txt`
+
+**`.gitignore`**
+```
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+```
+Indique à Git quels fichiers IGNORER lors du commit (évite de versionner l'environnement virtuel lourd).
 
 **Commandes Git (dans le dossier ssh_monitor) :**
 
@@ -507,18 +591,7 @@ git commit -m "Ajout Bonus Upload + Version Finale"
 git push
 # Synchronise le dépôt local avec GitHub (si un remote est configuré)
 ```
-
-**Structure du commit :**
-```
-ssh_monitor/
-├── app.py (code source)
-├── requirements.txt (dépendances)
-├── .gitignore (fichiers ignorés)
-├── datasetssh.csv (données)
-└── ... (autres fichiers)
-```
-
-### 5.2 Déploiement sur Streamlit Cloud
+**Déploiement sur Streamlit Cloud**
 
 1. Aller sur https://share.streamlit.io/
 2. Cliquer "New app"
@@ -531,7 +604,7 @@ ssh_monitor/
 
 **Résultat :** L'app est en ligne à https://dashboard-ssh-ysn.streamlit.app
 
-### 5.3 Déploiement Continu (CI/CD)
+**Déploiement Continu (CI/CD)**
 
 Chaque fois que vous faites `git push` :
 1. GitHub reçoit le nouveau code
@@ -541,43 +614,41 @@ Chaque fois que vous faites `git push` :
 
 C'est l'avantage du déploiement continu : zéro downtime, mise à jour instantanée.
 
+### Cycle de Mise à Jour:
+1.  Modification du code en local (VSCode).
+2.  Test local (`streamlit run app.py`).
+3.  Push vers GitHub (`git push`).
+4.  Re-déploiement automatique par Streamlit Cloud (Zéro maintenance serveur).
+
 ---
 
 ## 6. RÉSULTATS ET MÉTRIQUES
 
-### Performance
-- **Temps de chargement initial :** ~3 secondes (première fois)
-- **Temps de chargement après cache :** <100ms (5ème clic)
-- **Volume de données traité :** 655 147 logs
-- **Nombre de colonnes :** 5 (Timestamp, EventId, SourceIP, User, Raw_Message)
-- **Nombre d'IPs uniques :** 1 129
-- **Nombre d'EventId uniques :** ~10 types d'attaques
+### Performance Technique:
+*   **Volume traité** : Capacité à gérer +1000 IPs uniques pour la géolocalisation.
+*   **Stabilité API** : 100% de réussite grâce à la gestion des pauses (`Sleep`).
+*   **Temps de réponse** : ~20s pour la première géolocalisation complète (1129 IPs), **immédiat** (<100ms) pour les affichages suivants grâce au cache.
 
-### Utilisation Réelle
-- **Filtrage par date :** Réduit le dataset de 10% à 100% selon la plage
-- **Filtrage par EventId :** Réduit de 5% à 100%
-- **Filtrage par IP :** Réduit de 0.1% à 5%
-- **Combinaison des filtres :** Réduit le dataset de façon EXPONENTIELLE
-
-Exemple : (50% des dates) × (30% des EventId) × (0.5% d'une IP) = 0.075% du dataset original
+### Insights Sécurité:
+*   **Top Pays** : Identification claire des sources majeures (ex: Chine, USA, Corée du Sud).
+*   **Corrélation** : La carte permet de distinguer une attaque ciblée (un seul point géographique) d'une attaque par Botnet distribué (points multiples).
+*   **Filtrage** : Capacité à isoler une IP spécifique et voir instantanément son pays d'origine et son historique d'attaques.
 
 ---
 
-## 7. AMÉLIORATIONS FUTURES (Roadmap)
+## 7. AMÉLIORATIONS FUTURES 
 
-### V2 : Fonctionnalités Avancées
-1. **Géolocalisation** : Afficher une carte avec les adresses IP et leurs localisations
-2. **Export PDF** : Bouton pour télécharger un rapport filtré
-3. **Authentification** : Sécuriser l'accès avec login/password (via `st.secrets`)
-4. **Real-time Updates** : Intégration avec une API pour les logs live
-5. **Alertes** : Notifications email si une IP dépasse X tentatives
-6. **Machine Learning** : Détection d'anomalies (comportement anormal)
-
-### Infrastructure
-1. **Base de données** : Passer de CSV à PostgreSQL pour plus de performance
-2. **Scalabilité** : Migrer de Streamlit Cloud vers Kubernetes (si trafic augmente)
-3. **Backup** : Sauvegardes automatiques des logs en cloud
-
+1.  **API Key Privée** : Passer sur une version payante de l'API de géolocalisation pour supprimer la latence de 1.5s et permettre le temps réel.
+2.  **Enrichissement ASN** : Ajouter l'information du fournisseur d'accès (ISP) pour savoir si l'attaque vient d'un hébergeur (AWS, OVH) ou d'une connexion résidentielle.
+3.  **Mode Sombre/Clair** : Améliorer l'accessibilité de l'interface utilisateur.
+4. **Export PDF** : Bouton pour télécharger un rapport filtré
+5. **Authentification** : Sécuriser l'accès avec login/password (via `st.secrets`)
+6. **Real-time Updates** : Intégration avec une API pour les logs live
+7. **Alertes** : Notifications email si une IP dépasse X tentatives
+8. **Machine Learning** : Détection d'anomalies (comportement anormal)
+9. **Base de données** : Passer de CSV à PostgreSQL pour plus de performance
+10. **Scalabilité** : Migrer de Streamlit Cloud vers Kubernetes (si trafic augmente)
+11. **Backup** : Sauvegardes automatiques des logs en cloud
 ---
 
 ## 8. CONCLUSION
@@ -587,13 +658,12 @@ Ce projet démontre une **maîtrise complète du cycle de développement** :
 - ✅ Développement d'interface (Streamlit)
 - ✅ Déploiement en production (GitHub, Cloud)
 - ✅ Optimisation (Cache, Performance)
-- ✅ Documentation et communication
 
 ---
 
 ## ANNEXES
 
-### Glossaire Technique
+### Glossaire Technique: 
 - **ETL** : Extract (extraire), Transform (transformer), Load (charger)
 - **DataFrame** : Table de données en mémoire (colonne + lignes)
 - **Cache** : Stockage temporaire en mémoire pour éviter recalcul
