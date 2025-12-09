@@ -1,5 +1,8 @@
 import streamlit as st
 import pandas as pd
+import os
+script_dir = os.path.dirname(__file__)
+
 
 # 1. CONFIGURATION DE LA PAGE
 st.set_page_config(
@@ -41,12 +44,18 @@ def main():
         df_brut = load_data(uploaded_file)
     else:
         # Chargement par défaut si rien n'est uploadé
+        
         try:
-            df_brut = load_data('datasetssh.csv')
-            st.sidebar.info("Utilisation du fichier de démo par défaut.")
+           # Construisez le chemin complet vers votre CSV
+           csv_path = os.path.join(script_dir, 'datasetssh.csv')
+           df_brut = load_data(csv_path)
+           st.sidebar.info("Utilisation du fichier de démo par défaut.")
         except FileNotFoundError:
-            st.error("Fichier de démo 'datasetssh.csv' introuvable.")
-            return
+          st.error(f"Fichier de démo 'datasetssh.csv' introuvable.")
+          return
+
+
+       
 
     # Si le chargement a échoué (ex: mauvais format CSV)
     if df_brut.empty:
