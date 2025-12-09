@@ -54,7 +54,7 @@ def get_locations(ip_list):
             # --- PAUSE DE SÉCURITÉ ---
             # L'API gratuite limite à 45 requêtes/minute.
             # On fait une pause de 1.5s entre chaque lot de 100 IPs pour être sûr de passer.
-            time.sleep(1.5) 
+            time.sleep(2) 
             
         except Exception as e:
             st.error(f"Erreur de géolocalisation : {e}")
@@ -132,15 +132,52 @@ def main():
         chart_col1, chart_col2 = st.columns(2)
         with chart_col1:
             st.subheader("Top 10 IPs Attaquantes")
-            st.bar_chart(df_filtered['SourceIP'].value_counts().head(10))
+            
+            # Préparation des données pour Altair (Tri décroissant)
+            top_ips_data = df_filtered['SourceIP'].value_counts().head(10).reset_index()
+            top_ips_data.columns = ['IP', 'Count'] # Renommage pour Altair
+            
+            # Création du graphique Altair
+            chart_ips = alt.Chart(top_ips_data).mark_bar().encode(
+                x=alt.X('IP', sort='-y', title='Adresse IP'), # Le secret est ici : sort='-y'
+                y=alt.Y('Count', title="Nombre d'attaques"),
+                tooltip=['IP', 'Count']
+            ).interactive()
+            st.altair_chart(chart_ips, use_container_width=True)
 
         with chart_col2:
             st.subheader("Volume d'attaques par Heure")
-            st.line_chart(df_filtered.set_index('Timestamp').resample('H').size())
+            
+            # 1. Préparation : On regroupe par heure et on remet à plat pour Altair
+            time_data = df_filtered.set_index('Timestamp').resample('H').size().reset_index(name='Count')
+            
+            # 2. Graphique Altair (Ligne + Points)
+            chart_time = alt.Chart(time_data).mark_line(point=True).encode(
+                x=alt.X('Timestamp', title='Heure'),   # Axe X = Temps
+                y=alt.Y('Count', title="Volume"),      # Axe Y = Volume
+                tooltip=['Timestamp', 'Count']         # Affiche l'heure et le nombre au survol souris
+            ).interactive()
+            
+            st.altair_chart(chart_time, use_container_width=True)
+
 
         st.markdown("---")
         st.subheader("🚨 Top Usernames Tentés")
-        st.bar_chart(df_filtered['User'].value_counts().head(10))
+        
+        # 1. Préparation des données
+        # On compte, on garde le top 10, et on reset l'index pour avoir 2 colonnes propres
+        top_users_data = df_filtered['User'].value_counts().head(10).reset_index()
+        top_users_data.columns = ['User', 'Count']
+        
+        # 2. Création du graphique interactif
+        chart_users = alt.Chart(top_users_data).mark_bar().encode(
+            x=alt.X('User', sort='-y', title='Nom d\'utilisateur'), # Tri décroissant
+            y=alt.Y('Count', title="Tentatives"),
+            tooltip=['User', 'Count'] # Info-bulle au survol
+        ).interactive() # <--- C'est cette commande magique qui réactive le zoom/pan !
+        
+        st.altair_chart(chart_users, use_container_width=True)
+
 
         # --- CARTE GÉOGRAPHIQUE ---
         st.markdown("---")
@@ -150,10 +187,16 @@ def main():
             ips_to_locate = df_filtered['SourceIP'].dropna().unique().tolist()
             
             if len(ips_to_locate) > 0:
-                st.info(f"Géolocalisation de {len(ips_to_locate)} adresses IP uniques en cours... Cela peut prendre un moment.")
+                # On crée un espace vide pour le message
+                msg_placeholder = st.empty()
+                msg_placeholder.info(f"Géolocalisation de {len(ips_to_locate)} adresses IP uniques en cours...")
                 
                 with st.spinner("Interrogation de l'API de localisation..."):
                     df_locations = get_locations(ips_to_locate)
+                
+                # Une fois fini, on vide le message !
+                msg_placeholder.empty()
+
 
                 if not df_locations.empty:
                     # 1. La Carte
